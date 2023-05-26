@@ -1,0 +1,1039 @@
+{
+    "terraform": {
+        "required_providers": [
+            {
+                "huaweicloud": {
+                    "source": "huawei.com/provider/huaweicloud",
+                    "version": ">=1.44.0"
+                }
+            }
+        ]
+    },
+    "provider": {
+        "huaweicloud": {
+            "cloud": "myhuaweicloud.com",
+            "endpoints": {
+                "iam": "iam.ap-southeast-3.myhuaweicloud.com",
+                "dns": "dns.ap-southeast-3.myhuaweicloud.com",
+                "bss": "bss.myhuaweicloud.com"
+            },
+            "enterprise_project_id": "${var.enterprise_project_id}",
+            "insecure": true,
+            "region": "ap-southeast-3",
+            "auth_url": "https://iam.ap-southeast-3.myhuaweicloud.com/v3"
+        }
+    },
+    "variable": {
+        "availability_zone": {
+            "default": "ap-southeast-3c",
+            "description": "AZ where the solution is to be deployed. Only AZs in AP-Singapore are supported. Obtain the AZ information in the Quick Deployment of Cloud Environment for SAP S/4HANA. ap-southeast-3c is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ap-southeast-3a\",\"ap-southeast-3b\",\"ap-southeast-3c\"], var.availability_zone)}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "enterprise_project_id": {
+            "default": "0",
+            "description": "Enterprise project ID. Obtain the ID from the Enterprise Project Management console by referring to the Quick Deployment of Cloud Environment for SAP S/4HANA. 0 indicates the default enterprise project. The default value is 0.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(0|[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12})$\",var.enterprise_project_id))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "vpc_name": {
+            "default": "sap-s4hana-ha-demo",
+            "description": "Virtual Private Cloud (VPC) name. This template uses a newly created VPC and the VPC name must be unique. Value range: 1 to 64 characters, including letters, digits, underscores (_), hyphens (-), and periods (.). Default value: sap-s4hana-ha-demo.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[\\\\w\\\\.-]{1,64}$\",var.vpc_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "vpc_cidr": {
+            "default": "10.10.0.0/16",
+            "description": "VPC CIDR block. Value range: 10.0.0.0/8–24, 172.16.0.0/12–24, 192.168.0.0/16–24. Default value: 10.10.0.0/16.",
+            "type": "string",
+            "nullable": false
+        },
+        "subnet_sap_cidr": {
+            "default": "10.10.1.0/24",
+            "description": "Subnet CIDR block of the ECS where SAP S/4HANA application software is to be deployed. Value range: 10.0.0.0/8–24, 172.16.0.0/12–24, 192.168.0.0/16–24. Default value: 10.10.1.0/24.",
+            "type": "string",
+            "nullable": false
+        },
+        "subnet_db_cidr": {
+            "default": "10.10.2.0/24",
+            "description": "Subnet CIDR block of SAP HANA. Value range: 10.0.0.0/8–24, 172.16.0.0/12–24, 192.168.0.0/16–24. Default value: 10.10.2.0/24.",
+            "type": "string",
+            "nullable": false
+        },
+        "subnet_hb_cidr": {
+            "default": "10.10.3.0/24",
+            "description": "Subnet CIDR block of heartbeat. Value range: 10.0.0.0/8–24, 172.16.0.0/12–24, 192.168.0.0/16–24. Default value: 10.10.3.0/24.",
+            "type": "string",
+            "nullable": false
+        },
+        "subnet_sfs_turbo_cidr": {
+            "default": "10.10.4.0/24",
+            "description": "SFS Turbo subnet CIDR block.Value range: 10.0.0.0/8-24, 172.16.0.0/12-24, 192.168.0.0/16-24. Default value: 10.10.4.0/24.",
+            "type": "string",
+            "nullable": false
+        },
+        "ecs_password": {
+            "default": "",
+            "description": "ECS initial password. After an ECS is created, log in to the ECS console and change the password by referring to the Quick Deployment of Cloud Environment for SAP S/4HANA. Value range: 8 to 26 characters, containing at least three of the following character types: uppercase letters, lowercase letters, digits, and special characters (!@%-_=+[{}]:,./?).",
+            "type": "string",
+            "nullable": false,
+            "sensitive": true
+        },
+        "sap_s4_name": {
+            "default": "S4",
+            "description": "Prefix of the name of the ECS where SAP S/4HANA is deployed. The name must be unique. Value range: 1 to 47 characters, including letters, digits, underscores (_), hyphens (-), and periods (.). Default value: S4.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[\\\\w\\\\.-]{1,47}$\",var.sap_s4_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "sid": {
+            "default": "PRD",
+            "description": "Value range: 3 to 8 characters, including letters and digits. It is recommended that the value start with a letter. Default value: PRD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[A-Z0-9]{3,8}$\",var.sid))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ascs_instance_number": {
+            "default": "01",
+            "description": "ASCS instance number, which is used to form a directory name. Value range: a two-digit number. Default value: 01.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[0-9][0-9]$\",var.ascs_instance_number))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ers_instance_number": {
+            "default": "02",
+            "description": "ERS instance number, which is used to form a directory name. Value range: a two-digit number. The value must be different from that of ascs_instance_number. Default value: 02.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[0-9][0-9]$\",var.ers_instance_number))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ecs_s4_flavor": {
+            "default": "c6.xlarge.2",
+            "description": "Flavor name of the ECS where SAP S/4HANA is to be deployed. For details about the supported flavors, see the marketplace image SUSE Linux for SAP 15 SP3 in the Quick Deployment of Cloud Environment for SAP S/4HANA (a flavor with one to four vCPUs are supported by the default image). c6.xlarge.2 (c6 |4 vCPUs | 8 GiB) is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([a-z][a-z0-9]{0,3}\\\\.)(small\\\\.|medium\\\\.|(x||[1-9][0-9]{0,1}x)large\\\\.)[1-9][0-9]{0,1}$\",var.ecs_s4_flavor))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_image_1": {
+            "default": "a8b7692c-db58-40f4-8ba8-d90d6d1057b6",
+            "description": "Image ID of the active ECS where SAP S/4HANA is to be deployed, which can be a shared image ID, private image ID, or public image ID. The marketplace image SUSE Linux for SAP 15 SP3 is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}$\",var.s4_image_1))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_image_2": {
+            "default": "a8b7692c-db58-40f4-8ba8-d90d6d1057b6",
+            "description": "Image ID of the standby ECS where SAP S/4HANA is to be deployed, which can be a shared image ID, private image ID, or public image ID. The marketplace image SUSE Linux for SAP 15 SP3 is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}$\",var.s4_image_2))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_system_disk_type": {
+            "default": "SAS",
+            "description": "Type of the system disk used by the ECS where SAP S/4HANA is to be deployed. Value options: ESSD (Extreme SSD), SSD (Ultra-high I/O), GPSSD (General Purpose SSD), or SAS (High I/O). Default value: SAS.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.s4_system_disk_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_system_disk_size": {
+            "default": "40",
+            "description": "Size of the system disk used by the ECS where SAP S/4HANA is to be deployed. The unit is GB. The value ranges from 40 to 1024. The system disk size cannot be reduced. Default value: 40.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([4-9]\\\\d|[1-9]\\\\d{2}|10[0-1][0-9]|102[0-4])$\",var.s4_system_disk_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "s4_businessIP_1": {
+            "default": "10.10.1.11",
+            "description": "Service IP address of the active ECS where SAP S/4HANA is to be deployed. Value range: an IP address within the CIDR block of subnet-sap. Default value: 10.10.1.11.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.s4_businessIP_1))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_businessIP_2": {
+            "default": "10.10.1.12",
+            "description": "Service IP address of the standby ECS where SAP S/4HANA is to be deployed. Value range: an IP address within the CIDR block of subnet-sap. Default value: 10.10.1.12.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.s4_businessIP_2))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_heartbeatIP_1": {
+            "default": "10.10.3.11",
+            "description": "Heartbeat IP address of the active ECS where SAP S/4HANA is to be deployed. Value range: an IP address within the CIDR block of sap-hb. Default value: 10.10.3.11.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.s4_heartbeatIP_1))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_heartbeatIP_2": {
+            "default": "10.10.3.12",
+            "description": "Heartbeat IP address of the standby ECS where SAP S/4HANA is to be deployed. Value range: an IP address within the CIDR block of sap-hb. Default value: 10.10.3.12.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.s4_heartbeatIP_2))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "s4_vip": {
+            "default": "10.10.1.200",
+            "description": "Virtual IP address of the active/standby ECS where SAP S/4HANA is to be deployed. Value range: an IP address within the CIDR block of subnet-sap. Default value: 10.10.1.200.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.s4_vip))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_s4_swap_type": {
+            "default": "SSD",
+            "description": "Type of EVS disk used as the swap volume. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_s4_swap_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_s4_swap_size": {
+            "default": "20",
+            "description": "Size of EVS disk used as the swap volume. The unit is GB, and the value ranges from 10 to 32768. Default value: 20.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_s4_swap_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_s4_sap_type": {
+            "default": "SSD",
+            "description": "EVS disk type. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /usr/sap. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_s4_sap_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_s4_sap_size": {
+            "default": "50",
+            "description": "EVS disk size in GB. The value ranges from 10 to 32768. Mount path: /usr/sap. Default value: 50.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_s4_sap_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_s4_sbd_type": {
+            "default": "SSD",
+            "description": "Type of shared EVS disk used as the SBD volume. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_s4_sbd_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_s4_sbd_size": {
+            "default": "10",
+            "description": "Size of shared EVS disk used as the SBD volume. The unit is GB, and the value ranges from 10 to 32768. Default value: 10.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_s4_sbd_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_s4_ascs_type": {
+            "default": "SSD",
+            "description": "Type of shared EVS disk. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /usr/sap/<SID>/ASCSXX. The disk is shared to the active ASCS node for ASCS instance installation. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_s4_ascs_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_s4_ascs_size": {
+            "default": "80",
+            "description": "Size of shared EVS disk. The unit is GB, and the value ranges from 10 to 32768. Mount path: /usr/sap/<SID>/ASCSXX. The disk is shared to the active ASCS node for ASCS instance installation. Default value: 80.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_s4_ascs_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_s4_ers_type": {
+            "default": "SSD",
+            "description": "Type of shared EVS disk. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /usr/sap/<SID>/ERSXX. The disk is shared to the standby ASCS node for ERS instance installation. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_s4_ers_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_s4_ers_size": {
+            "default": "80",
+            "description": "Size of shared EVS disk. The unit is GB, and the value ranges from 10 to 32768. Mount path: /usr/sap/<SID>/ERSXX. The disk is shared to the standby ASCS node for ERS instance installation. Default value: 80.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_s4_ers_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "sap_hana_name": {
+            "default": "HANA",
+            "description": "Prefix of the name of the ECS where SAP HANA is deployed. The name must be unique. Value range: 1 to 52 characters, including letters, digits, underscores (_), hyphens (-), and periods (.). Default value: HANA.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[\\\\w\\\\.-]{1,52}$\",var.sap_hana_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ecs_hana_flavor": {
+            "default": "c6.2xlarge.4",
+            "description": "Flavor name of the ECS where SAP HANA is to be deployed. For details about the supported flavors, see the marketplace image SUSE Linux for SAP 15 SP3 in the Quick Deployment of Cloud Environment for SAP S/4HANA (eight or more vCPUs are supported by the default image ID). c6.2xlarge.4 (c6 | 8 vCPUs | 32 GiB) is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([a-z][a-z0-9]{0,3}\\\\.)(small\\\\.|medium\\\\.|(x||[1-9][0-9]{0,1}x)large\\\\.)[1-9][0-9]{0,1}$\",var.ecs_hana_flavor))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_image_1": {
+            "default": "eafbd213-067a-409e-9c0f-07a3d6ac1488",
+            "description": "Image ID of the active ECS where SAP HANA is to be deployed, which can be a shared image ID, private image ID, or public image ID. The marketplace image SUSE Linux for SAP 15 SP3 is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}$\",var.hana_image_1))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_image_2": {
+            "default": "eafbd213-067a-409e-9c0f-07a3d6ac1488",
+            "description": "Image ID of the standby ECS where SAP HANA is to be deployed, which can be a shared image ID, private image ID, or public image ID. The marketplace image SUSE Linux for SAP 15 SP3 is used by default.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}$\",var.hana_image_2))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_system_disk_type": {
+            "default": "SAS",
+            "description": "Type of the system disk. Value options: ESSD (Extreme SSD), SSD (Ultra-high I/O), GPSSD (General Purpose SSD), or SAS (High I/O). Default value: SAS.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.hana_system_disk_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_system_disk_size": {
+            "default": "40",
+            "description": "Size of the system disk used by the ECS where SAP HANA is to be deployed. The unit is GB. The value ranges from 40 to 1024. The system disk size cannot be reduced. Default value: 40.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([4-9]\\\\d|[1-9]\\\\d{2}|10[0-1][0-9]|102[0-4])$\",var.hana_system_disk_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "hana_businessIP_1": {
+            "default": "10.10.2.21",
+            "description": "Service IP address of the active ECS where SAP HANA is to be deployed. Value range: an IP address within the CIDR block of subnet-db. Default value: 10.10.2.21.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.hana_businessIP_1))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_businessIP_2": {
+            "default": "10.10.2.22",
+            "description": "Service IP address of the standby ECS where SAP HANA is to be deployed. Value range: an IP address within the CIDR block of subnet-db. Default value:10.10.2.22.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.hana_businessIP_2))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_heartbeatIP_1": {
+            "default": "10.10.3.21",
+            "description": "Heartbeat IP address of the active ECS where SAP HANA is to be deployed. Value range: an IP address within the CIDR block of heartbeatIP. Default value: 10.10.3.21.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.hana_heartbeatIP_1))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_heartbeatIP_2": {
+            "default": "10.10.3.22",
+            "description": "Heartbeat IP address of the standby ECS where SAP HANA is to be deployed. Value range: an IP address within the CIDR block of heartbeatIP. Default value: 10.10.3.22.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.hana_heartbeatIP_2))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "hana_vip": {
+            "default": "10.10.2.200",
+            "description": "Virtual IP address of the active/standby ECS where SAP HANA is to be deployed. Value range: an IP address within the CIDR block of subnet-db. Default value: 10.10.2.200.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$\",var.hana_vip))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_swap_type": {
+            "default": "SSD",
+            "description": "Type of EVS disk used as the swap volume. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_hana_swap_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_swap_size": {
+            "default": "10",
+            "description": "Size of EVS disk used as the swap volume. The unit is GB, and the value ranges from 10 to 32768. Default value: 10.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_hana_swap_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_hana_sap_type": {
+            "default": "SSD",
+            "description": "EVS disk type. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /usr/sap. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_hana_sap_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_sap_size": {
+            "default": "50",
+            "description": "EVS disk size in GB. The value ranges from 10 to 32768. Mount path: /usr/sap. Default value: 50.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_hana_sap_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_hana_log_type": {
+            "default": "SSD",
+            "description": "EVS disk type. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /hana/log. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_hana_log_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_log_size": {
+            "default": "200",
+            "description": "EVS disk size in GB. The value ranges from 10 to 32768. Mount path: /hana/log. When the memory size is less than or equal to 512 GB, the log volume capacity is half of the memory size and rounded up for decimal places. When the memory size is greater than 512 GB, the log volume capacity is 512 GB. Default value: 200.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_hana_log_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_hana_shared_type": {
+            "default": "SSD",
+            "description": "EVS disk type. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /hana/shared. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_hana_shared_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_shared_size": {
+            "default": "400",
+            "description": "EVS disk size in GB. The value ranges from 10 to 32768. Mount path: /hana/shared. The recommended size is at least 1.2 times that of the memory size. The default value is 400.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_hana_shared_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_hana_data_type": {
+            "default": "SSD",
+            "description": "EVS disk type. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Mount path: /hana/data. Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_hana_data_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_data_size": {
+            "default": "400",
+            "description": "EVS disk size in GB. The value ranges from 20 to 32768. Mount path: /hana/data. The recommended size is at least 1.2 times that of the memory size. The default value is 400.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([2-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_hana_data_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "evs_hana_sbd_type": {
+            "default": "SSD",
+            "description": "Type of shared EVS disk used as the SBD volume. Value options: SAS (high I/O), SSD (ultra-high I/O), GPSSD (general-purpose SSD), and ESSD (Extreme SSD). Default value: SSD.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"ESSD\",\"SSD\",\"GPSSD\",\"SAS\"], var.evs_hana_sbd_type)}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "evs_hana_sbd_size": {
+            "default": "10",
+            "description": "Size of shared EVS disk used as the SBD volume. The unit is GB, and the value ranges from 10 to 32768. Default value: 10.",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.evs_hana_sbd_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "obs_bucket_name": {
+            "default": "",
+            "description": "OBS bucket name prefix. The bucket name must be unique. If OBS is not used for HANA backup, set this parameter to null. Value range: 3 to 54 characters, including lowercase letters, digits, hyphens (-), and periods (.), and cannot start with a hyphen (-) or period (.)",
+            "type": "string",
+            "nullable": true,
+            "validation": {
+                "condition": "${length(regexall(\"^[a-z0-9][a-z0-9\\\\.-]{2,53}$|^$\",var.obs_bucket_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ak": {
+            "default": "",
+            "description": "Access key ID. The access key ID is provided for the obsfs tool to mount the parallel file system. If the parallel file system does not need to be mounted, set it to null. For details about how to obtain the access key ID, see the Quick Deployment of Cloud Environment for SAP S/4HANA.",
+            "type": "string",
+            "nullable": true,
+            "sensitive": true
+        },
+        "sk": {
+            "default": "",
+            "description": "Secret access key used together with the access key ID. The secret access key ID is provided for the obsfs tool to mount the parallel file system. If the parallel file system does not need to be mounted, set it to null.",
+            "type": "string",
+            "nullable": true,
+            "sensitive": true
+        },
+        "charging_mode": {
+            "default": "prePaid",
+            "description": "Billing mode. Value options: prePaid (yearly/monthly) or postPaid (pay-per-use). Default value: prePaid.",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"postPaid\",\"prePaid\"], var.charging_mode)}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "charging_unit": {
+            "default": "month",
+            "description": "Subscription period unit. This parameter is valid only when charging_mode is set to prePaid (yearly/monthly). The value can be month or year. Default value: month",
+            "type": "string",
+            "nullable": true,
+            "validation": {
+                "condition": "${contains([\"month\",\"year\"], var.charging_unit)}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "charging_period": {
+            "default": 1,
+            "description": "Subscription period. This parameter is valid only when charging_mode is set to prePaid (yearly/monthly). Subscription period. This parameter is valid only when charging_mode is set to prePaid (yearly/monthly). The default subscription period is one month.",
+            "type": "number",
+            "nullable": true,
+            "validation": {
+                "condition": "${length(regexall(\"^[1-9]$|^$\",var.charging_period))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        }
+    },
+    "resource": {
+        "huaweicloud_vpc": {
+            "vpc": {
+                "cidr": "${var.vpc_cidr}",
+                "name": "${var.vpc_name}"
+            }
+        },
+        "huaweicloud_vpc_subnet": {
+            "subnet_sap": {
+                "cidr": "${var.subnet_sap_cidr}",
+                "gateway_ip": "${cidrhost(var.subnet_sap_cidr,1)}",
+                "name": "subnet-sap",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}"
+            },
+            "subnet_db": {
+                "cidr": "${var.subnet_db_cidr}",
+                "gateway_ip": "${cidrhost(var.subnet_db_cidr,1)}",
+                "name": "subnet-db",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}"
+            },
+            "subnet_hb": {
+                "cidr": "${var.subnet_hb_cidr}",
+                "gateway_ip": "${cidrhost(var.subnet_hb_cidr,1)}",
+                "name": "subnet-hb",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}"
+            },
+            "subnet_sfs_turbo": {
+                "cidr": "${var.subnet_sfs_turbo_cidr}",
+                "gateway_ip": "${cidrhost(var.subnet_sfs_turbo_cidr,1)}",
+                "name": "subnet_sfs_turbo",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}"
+            }
+        },
+        "huaweicloud_networking_secgroup": {
+            "secgroup_sap_hana": {
+                "name": "${var.sap_hana_name}-sg-sap-hana"
+            },
+            "secgroup_sap_s4": {
+                "name": "${var.sap_s4_name}-sg-sap-s4"
+            }
+        },
+        "huaweicloud_networking_secgroup_rule": {
+            "allow_ssh_linux": {
+                "description": "Allows users to access the SAP HANA Studio using Secure Shell (SSH) protocol.",
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "ports": "22",
+                "protocol": "tcp",
+                "remote_ip_prefix": "${var.vpc_cidr}",
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup_sap_hana.id}"
+            },
+            "allow_tcp_hana": {
+                "description": "Allows IP addresses in the ${var.vpc_cidr} CIDR block to access all TCP ports of the ECS.",
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "protocol": "tcp",
+                "remote_ip_prefix": "${var.vpc_cidr}",
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup_sap_hana.id}"
+            },
+            "allow_tcp_s4": {
+                "description": "Allows traffic from the ${var.vpc_cidr} CIDR block.",
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "protocol": "tcp",
+                "remote_ip_prefix": "${var.vpc_cidr}",
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup_sap_s4.id}"
+            }
+        },
+        "huaweicloud_compute_servergroup": {
+            "servergroup_s4_hana": {
+                "name": "sap-s4hana-servergroup",
+                "policies": [
+                    "anti-affinity"
+                ]
+            }
+        },
+        "huaweicloud_sfs_turbo": {
+            "sfs_turbo_s4_sapmnt": {
+                "name": "${var.sap_s4_name}-sfs-turbo-sapmnt",
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup_sap_s4.id}",
+                "share_proto": "NFS",
+                "size": 500,
+                "subnet_id": "${huaweicloud_vpc_subnet.subnet_sfs_turbo.id}",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}",
+                "availability_zone": "${var.availability_zone}"
+            },
+            "sfs_turbo_s4_trans": {
+                "name": "${var.sap_s4_name}-sfs-turbo-trans",
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup_sap_s4.id}",
+                "share_proto": "NFS",
+                "size": 500,
+                "subnet_id": "${huaweicloud_vpc_subnet.subnet_sfs_turbo.id}",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}",
+                "availability_zone": "${var.availability_zone}"
+            }
+        },
+        "huaweicloud_obs_bucket": {
+            "hana_backup_bucket": {
+                "count": "${var.obs_bucket_name == \"null\" ? 0 : 2}",
+                "acl": "private",
+                "bucket": "${lower(var.obs_bucket_name)}-backup-${count.index+1}",
+                "multi_az": true,
+                "parallel_fs": true
+            }
+        },
+        "huaweicloud_compute_instance": {
+            "compute_instance_s4": {
+                "availability_zone": "${var.availability_zone}",
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "count": 2,
+                "flavor_id": "${var.ecs_s4_flavor}",
+                "image_id": "${count.index == 0 ? var.s4_image_1 : var.s4_image_2}",
+                "name": "${var.sap_s4_name}-${count.index+1}",
+                "system_disk_type": "${var.s4_system_disk_type}",
+                "system_disk_size": "${var.s4_system_disk_size}",
+                "agent_list": "ces,hss",
+                "user_data": "#!/bin/bash\necho 'root:${var.ecs_password}' | chpasswd\nwget -P /tmp/ https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/rapid-deployment-of-sap-s4hana-cloud-environment/userdata/init-sap-s4hana-ha.sh\nchmod 700 /tmp/init-sap-s4hana-ha.sh\n/tmp/init-sap-s4hana-ha.sh '${var.hana_businessIP_1}' '${var.hana_businessIP_2}' '${var.s4_businessIP_1}' '${var.s4_businessIP_2}' '${huaweicloud_sfs_turbo.sfs_turbo_s4_sapmnt.export_location}' '${huaweicloud_sfs_turbo.sfs_turbo_s4_trans.export_location}' '${var.sap_s4_name}' '${var.sap_hana_name}' '${var.sid}' '${var.ascs_instance_number}' '${var.ers_instance_number}' 'AK=${var.ak}' 'SK=${var.sk}'  > /tmp/tmp.log 2>&1\nrm -rf /tmp/init-sap-s4hana-ha.sh\n",
+                "network": [
+                    {
+                        "fixed_ip_v4": "${count.index == 0 ? var.s4_businessIP_1 : var.s4_businessIP_2}",
+                        "source_dest_check": false,
+                        "uuid": "${huaweicloud_vpc_subnet.subnet_sap.id}"
+                    },
+                    {
+                        "fixed_ip_v4": "${count.index == 0 ? var.s4_heartbeatIP_1 : var.s4_heartbeatIP_2}",
+                        "source_dest_check": false,
+                        "uuid": "${huaweicloud_vpc_subnet.subnet_hb.id}"
+                    }
+                ],
+                "scheduler_hints": [
+                    {
+                        "group": "${huaweicloud_compute_servergroup.servergroup_s4_hana.id}"
+                    }
+                ],
+                "security_group_ids": [
+                    "${huaweicloud_networking_secgroup.secgroup_sap_s4.id}"
+                ]
+            },
+            "compute_instance_hana": {
+                "availability_zone": "${var.availability_zone}",
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "count": 2,
+                "flavor_id": "${var.ecs_hana_flavor}",
+                "image_id": "${count.index == 0 ? var.hana_image_1 : var.hana_image_2}",
+                "name": "${var.sap_hana_name}-${count.index+1}",
+                "system_disk_type": "${var.hana_system_disk_type}",
+                "system_disk_size": "${var.hana_system_disk_size}",
+                "agent_list": "ces,hss",
+                "user_data": "#!/bin/bash\necho 'root:${var.ecs_password}' | chpasswd\nwget -P /tmp/ https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/rapid-deployment-of-sap-s4hana-cloud-environment/userdata/init-sap-s4hana-ha.sh\nchmod 700 /tmp/init-sap-s4hana-ha.sh\n/tmp/init-sap-s4hana-ha.sh '${var.hana_businessIP_1}' '${var.hana_businessIP_2}' '${var.s4_businessIP_1}' '${var.s4_businessIP_2}' '${huaweicloud_sfs_turbo.sfs_turbo_s4_sapmnt.export_location}' '${huaweicloud_sfs_turbo.sfs_turbo_s4_trans.export_location}' '${var.sap_s4_name}' '${var.sap_hana_name}' '${var.sid}' '${var.ascs_instance_number}' '${var.ers_instance_number}' 'AK=${var.ak}' 'SK=${var.sk}' '${var.obs_bucket_name}' > /tmp/tmp.log 2>&1\nrm -rf /tmp/init-sap-s4hana-ha.sh\n",
+                "network": [
+                    {
+                        "fixed_ip_v4": "${count.index == 0 ? var.hana_businessIP_1 : var.hana_businessIP_2}",
+                        "source_dest_check": false,
+                        "uuid": "${huaweicloud_vpc_subnet.subnet_db.id}"
+                    },
+                    {
+                        "fixed_ip_v4": "${count.index == 0 ? var.hana_heartbeatIP_1 : var.hana_heartbeatIP_2}",
+                        "source_dest_check": false,
+                        "uuid": "${huaweicloud_vpc_subnet.subnet_hb.id}"
+                    }
+                ],
+                "scheduler_hints": [
+                    {
+                        "group": "${huaweicloud_compute_servergroup.servergroup_s4_hana.id}"
+                    }
+                ],
+                "security_group_ids": [
+                    "${huaweicloud_networking_secgroup.secgroup_sap_hana.id}"
+                ]
+            }
+        },
+        "huaweicloud_networking_vip": {
+            "s4_vip": {
+                "ip_address": "${var.s4_vip}",
+                "network_id": "${huaweicloud_vpc_subnet.subnet_sap.id}"
+            },
+            "hana_vip": {
+                "ip_address": "${var.hana_vip}",
+                "network_id": "${huaweicloud_vpc_subnet.subnet_db.id}"
+            }
+        },
+        "huaweicloud_networking_vip_associate": {
+            "vip_associated_hana": {
+                "port_ids": "${huaweicloud_compute_instance.compute_instance_hana[*].network.0.port}",
+                "vip_id": "${huaweicloud_networking_vip.hana_vip.id}"
+            },
+            "vip_associated_s4": {
+                "port_ids": "${huaweicloud_compute_instance.compute_instance_s4[*].network.0.port}",
+                "vip_id": "${huaweicloud_networking_vip.s4_vip.id}"
+            }
+        },
+        "huaweicloud_evs_volume": {
+            "evs_hana_swap": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_hana_name}-swap-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_hana_swap_type}",
+                "size": "${var.evs_hana_swap_size}"
+            },
+            "evs_hana_sap": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_hana_name}-sap-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_hana_sap_type}",
+                "size": "${var.evs_hana_sap_size}"
+            },
+            "evs_hana_log": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_hana_name}-log-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_hana_log_type}",
+                "size": "${var.evs_hana_log_size}"
+            },
+            "evs_hana_shared": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_hana_name}-shared-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_hana_shared_type}",
+                "size": "${var.evs_hana_shared_size}"
+            },
+            "evs_hana_data1": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_hana_name}-data1-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_hana_data_type}",
+                "size": "${tonumber(var.evs_hana_data_size)/2}"
+            },
+            "evs_hana_data2": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_hana_name}-data2-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_hana_data_type}",
+                "size": "${tonumber(var.evs_hana_data_size)/2}"
+            },
+            "evs_hana_sbd": {
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "availability_zone": "${var.availability_zone}",
+                "device_type": "SCSI",
+                "multiattach": true,
+                "name": "${var.sap_hana_name}-sbd",
+                "volume_type": "${var.evs_hana_sbd_type}",
+                "size": "${var.evs_hana_sbd_size}"
+            },
+            "evs_s4_swap": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_s4_name}-swap-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_s4_swap_type}",
+                "size": "${var.evs_s4_swap_size}"
+            },
+            "evs_s4_sap": {
+                "count": 2,
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "name": "${var.sap_s4_name}-sap-${count.index+1}",
+                "availability_zone": "${var.availability_zone}",
+                "volume_type": "${var.evs_s4_sap_type}",
+                "size": "${var.evs_s4_sap_size}"
+            },
+            "evs_s4_sbd": {
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "availability_zone": "${var.availability_zone}",
+                "device_type": "SCSI",
+                "multiattach": true,
+                "name": "${var.sap_s4_name}-sbd",
+                "volume_type": "${var.evs_s4_sbd_type}",
+                "size": "${var.evs_s4_sbd_size}"
+            },
+            "evs_s4_ascs": {
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "availability_zone": "${var.availability_zone}",
+                "device_type": "SCSI",
+                "multiattach": true,
+                "name": "${var.sap_s4_name}-ascs",
+                "volume_type": "${var.evs_s4_ascs_type}",
+                "size": "${var.evs_s4_ascs_size}"
+            },
+            "evs_s4_ers": {
+                "charging_mode": "${var.charging_mode}",
+                "period_unit": "${var.charging_unit}",
+                "period": "${var.charging_period}",
+                "availability_zone": "${var.availability_zone}",
+                "device_type": "SCSI",
+                "multiattach": true,
+                "name": "${var.sap_s4_name}-ers",
+                "volume_type": "${var.evs_s4_ers_type}",
+                "size": "${var.evs_s4_ers_size}"
+            }
+        },
+        "huaweicloud_compute_volume_attach": {
+            "evs_hana_swap_attach": {
+                "count": 2,
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_swap[count.index].id}",
+                "device": "/dev/vdb"
+            },
+            "evs_hana_sap_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_hana_swap_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_sap[count.index].id}",
+                "device": "/dev/vdc"
+            },
+            "evs_hana_log_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_hana_sap_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_log[count.index].id}",
+                "device": "/dev/vdd"
+            },
+            "evs_hana_shared_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_hana_log_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_shared[count.index].id}",
+                "device": "/dev/vde"
+            },
+            "evs_hana_data1_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_hana_shared_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_data1[count.index].id}",
+                "device": "/dev/vdf"
+            },
+            "evs_hana_data2_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_hana_shared_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_data2[count.index].id}",
+                "device": "/dev/vdg"
+            },
+            "evs_hana_sbd_attach": {
+                "count": 2,
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_hana[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_hana_sbd.id}",
+                "device": "/dev/sda"
+            },
+            "evs_s4_swap_attach": {
+                "count": 2,
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_s4[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_s4_swap[count.index].id}",
+                "device": "/dev/vdb"
+            },
+            "evs_s4_sap_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_s4_swap_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_s4[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_s4_sap[count.index].id}",
+                "device": "/dev/vdc"
+            },
+            "evs_s4_sbd_attach": {
+                "count": 2,
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_s4[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_s4_sbd.id}",
+                "device": "/dev/sda"
+            },
+            "evs_s4_ascs_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_s4_sbd_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_s4[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_s4_ascs.id}",
+                "device": "/dev/sdb"
+            },
+            "evs_s4_ers_attach": {
+                "count": 2,
+                "depends_on": [
+                    "huaweicloud_compute_volume_attach.evs_s4_ascs_attach"
+                ],
+                "instance_id": "${huaweicloud_compute_instance.compute_instance_s4[count.index].id}",
+                "volume_id": "${huaweicloud_evs_volume.evs_s4_ers.id}",
+                "device": "/dev/sdc"
+            }
+        }
+    }
+}
